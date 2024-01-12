@@ -8,7 +8,6 @@ async function run() {
     const githubToken = core.getInput('github-token');
     const openaiApiKey = core.getInput('openai-api-key');
 
-    // Fetch the PR diff
     const octokit = github.getOctokit(githubToken);
     const context = github.context;
 
@@ -17,6 +16,16 @@ async function run() {
         return;
     }
 
+    // Fetch the main PR comment
+    const { data: pr } = await octokit.rest.pulls.get({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: context.payload.pull_request.number
+    });
+    const prComment = pr.body;
+    console.log("PR comment", prComment);
+
+    // Fetch the git diff in text form
     const { data: diff } = await octokit.rest.pulls.get({
         owner: context.repo.owner,
         repo: context.repo.repo,
@@ -26,7 +35,6 @@ async function run() {
         }
     });
 
-    console.log('Diff fetched:', diff);
 }
 
 run();
