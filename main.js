@@ -10,12 +10,23 @@ async function run() {
 
     // Fetch the PR diff
     const octokit = github.getOctokit(githubToken);
-    const diff = await octokit.pulls.get({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: github.context.payload.pull_request.number,
+    const context = github.context;
+
+    if (!context.payload.pull_request) {
+        core.setFailed('No pull request found.');
+        return;
+    }
+
+    const { data: diff } = await octokit.rest.pulls.get({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: context.payload.pull_request.number,
+        mediaType: {
+            format: 'diff'
+        }
     });
-    console.log('Diff:', diff.data);
+
+    console.log('Diff fetched:', diff);
 }
 
 run();
