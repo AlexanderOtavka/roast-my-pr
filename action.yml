@@ -22,7 +22,9 @@ inputs:
       {{pr.body}}
 
       Code Diff:
+      ```
       {{pr.diff}}
+      ```
 
 runs:
   using: 'node20'

@@ -49,10 +49,7 @@ async function run() {
     
     console.log('Prompt:', prompt);
 
-    const review = `
-        # Prompt
-        ${prompt}
-    `
+    const review = `# Prompt\n\n${prompt}`
 
     // Post a comment to the PR with the review
     await octokit.rest.issues.createComment({
