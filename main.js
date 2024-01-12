@@ -1,64 +1,21 @@
-const axios = require('axios');
+const core = require('@actions/core');
+const github = require('@actions/github');
 const openai = require('openai');
 
 async function run() {
     console.log('Starting the review process...');
 
-    const githubToken = process.env.GITHUB_TOKEN;
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    const pullRequest = JSON.parse(process.env.GITHUB_EVENT_PATH);
+    const githubToken = core.getInput('github-token');
+    const openaiApiKey = core.getInput('openai-api-key');
 
-    if (!pullRequest.pull_request) {
-        console.log('The event payload did not contain a pull_request object');
-        return;
-    }
-
-    const prNumber = pullRequest.pull_request.number;
-    const repo = process.env.GITHUB_REPOSITORY;
-    const owner = repo.split('/')[0];
-    const repoName = repo.split('/')[1];
-
-    const filesChangedResponse = await axios.get(`https://api.github.com/repos/${owner}/${repoName}/pulls/${prNumber}/files`, {
-        headers: {
-            'Authorization': `token ${githubToken}`,
-            'Accept': 'application/vnd.github.v3+json'
-        }
+    // Fetch the PR diff
+    const octokit = github.getOctokit(githubToken);
+    const diff = await octokit.pulls.get({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        pull_number: github.context.payload.pull_request.number,
     });
-
-    const filesChanged = filesChangedResponse.data.map(file => file.filename);
-
-    for (const file of filesChanged) {
-        const fileContentResponse = await axios.get(`https://api.github.com/repos/${owner}/${repoName}/contents/${file}`, {
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        });
-
-        const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf8');
-        const prompt = `
-            Review this code:
-            ### File: ${file}\n\n${fileContent}
-        `
-        console.log("Sending prompt", prompt);
-
-        const openaiResponse = await openai.Completion.create({
-            engine: 'text-davinci-002',
-            prompt,
-            max_tokens: 60
-        });
-
-        const comment = openaiResponse.choices[0].text.trim();
-
-        await axios.post(`https://api.github.com/repos/${owner}/${repoName}/issues/${prNumber}/comments`, {
-            body: comment
-        }, {
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        });
-    }
+    console.log('Diff:', diff.data);
 }
 
 run();
