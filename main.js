@@ -47,16 +47,23 @@ async function run() {
         .replace('{{pr.body}}', pr.body)
         .replace('{{pr.diff}}', shortDiff);
     
-    console.log('Prompt:', prompt);
+    console.log('Prompting GPT:\n', prompt);
+    const openaiClient = new openai.ApiClient({ apiKey: openaiApiKey });
+    const gptResponse = await openaiClient.createCompletion({
+        engine: 'gpt-4',
+        prompt: prompt,
+        maxTokens: 100
+    });
 
-    const review = `# Prompt\n\n${prompt}`
+    const review = gptResponse.choices[0].text;
+    const reviewComment = `# Prompt\n\n${prompt}\n\n# Review\n\n${review}`
 
     // Post a comment to the PR with the review
     await octokit.rest.issues.createComment({
         owner: context.repo.owner,
         repo: context.repo.repo,
         issue_number: prNumber,
-        body: review
+        body: reviewComment
     });
 }
 
