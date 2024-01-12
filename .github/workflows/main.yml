@@ -1,0 +1,16 @@
+name: Automatic Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Run Automatic Code Review
+      uses: ./
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}

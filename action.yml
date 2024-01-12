@@ -1,0 +1,18 @@
+name: Roast My PR
+description: Automatic AI code reviews
+author: Zander Otavka
+branding:
+  icon: 'eye'
+  color: 'orange'
+
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+  openai-api-key:
+    description: 'OpenAI API key'
+    required: true
+
+runs:
+  using: 'node20'
+  main: 'main.js'

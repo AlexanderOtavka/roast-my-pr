@@ -1,0 +1,30 @@
+{
+  "name": "roast-my-pr",
+  "version": "1.0.0",
+  "description": "A github action that does automatic code reviews by leaving comments on new prs using the openai api to access chat GPT via javascript",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/github-action-code-review.git"
+  },
+  "keywords": [
+    "github-action",
+    "code-review",
+    "openai",
+    "gpt",
+    "javascript"
+  ],
+  "author": "Zander Otavka",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/github-action-code-review/issues"
+  },
+  "homepage": "https://github.com/yourusername/github-action-code-review#readme",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "openai": "^0.0.3"
+  }
+}
