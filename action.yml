@@ -15,7 +15,7 @@ inputs:
   openai-model:
     description: 'OpenAI model'
     required: false
-    default: 'gpt-3.5-turbo'
+    default: 'gpt-4'
   system-prompt:
     description: 'Prompt sent as the system role.  Should include instructions for the review.'
     required: false
