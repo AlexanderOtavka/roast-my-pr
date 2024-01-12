@@ -35,10 +35,15 @@ async function run() {
             });
 
             const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf8');
+            const prompt = `
+                Review this code:
+                ### File: ${file}\n\n${fileContent}
+            `
+            console.log("Sending prompt", prompt);
 
             const openaiResponse = await openai.Completion.create({
                 engine: 'text-davinci-002',
-                prompt: fileContent,
+                prompt,
                 max_tokens: 60
             });
 
