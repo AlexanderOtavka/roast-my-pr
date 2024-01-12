@@ -3,6 +3,8 @@ const openai = require('openai');
 
 async function run() {
     try {
+        console.log('Starting the review process...');
+
         const githubToken = process.env.GITHUB_TOKEN;
         const openaiApiKey = process.env.OPENAI_API_KEY;
         const pullRequest = JSON.parse(process.env.GITHUB_EVENT_PATH);
