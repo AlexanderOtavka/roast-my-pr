@@ -12,6 +12,10 @@ inputs:
   openai-api-key:
     description: 'OpenAI API key'
     required: true
+  openai-model:
+    description: 'OpenAI model'
+    required: false
+    default: 'gpt-3.5-turbo'
   prompt-template:
     description: 'Template for OpenAI prompt'
     required: false

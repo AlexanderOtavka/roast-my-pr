@@ -1,12 +1,13 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
-const openai = require('openai');
+const { OpenAI } = require('openai');
 
 async function run() {
     console.log('Starting the review process...');
 
     const githubToken = core.getInput('github-token');
     const openaiApiKey = core.getInput('openai-api-key');
+    const openaiModel = core.getInput('openai-model');
     const promptTemplate = core.getInput('prompt-template');
     const maxDiffSize = 2000;
 
@@ -47,16 +48,24 @@ async function run() {
         .replace('{{pr.body}}', pr.body)
         .replace('{{pr.diff}}', shortDiff);
     
-    console.log('Prompt:', prompt);
+    console.log('Prompting GPT:\n', prompt);
+    const openaiClient = new OpenAI({ apiKey: openaiApiKey });
+    const completion = await openaiClient.chat.completions.create({
+        model: openaiModel,
+        messages: [
+            { role: "user", content: prompt }
+        ]
+    });
 
-    const review = `# Prompt\n\n${prompt}`
+    const review = completion.choices[0].message.content;
+    const reviewComment = `# Prompt\n\n${prompt}\n\n# Review\n\n${review}`
 
     // Post a comment to the PR with the review
     await octokit.rest.issues.createComment({
         owner: context.repo.owner,
         repo: context.repo.repo,
         issue_number: prNumber,
-        body: review
+        body: reviewComment
     });
 }
 
