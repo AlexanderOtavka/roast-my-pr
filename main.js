@@ -1,12 +1,13 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
-const openai = require('openai');
+const { OpenAI } = require('openai');
 
 async function run() {
     console.log('Starting the review process...');
 
     const githubToken = core.getInput('github-token');
     const openaiApiKey = core.getInput('openai-api-key');
+    const openaiModel = core.getInput('openai-model');
     const promptTemplate = core.getInput('prompt-template');
     const maxDiffSize = 2000;
 
@@ -48,14 +49,15 @@ async function run() {
         .replace('{{pr.diff}}', shortDiff);
     
     console.log('Prompting GPT:\n', prompt);
-    const openaiClient = new openai.ApiClient({ apiKey: openaiApiKey });
-    const gptResponse = await openaiClient.createCompletion({
-        engine: 'gpt-4',
-        prompt: prompt,
-        maxTokens: 100
+    const openaiClient = new OpenAI({ apiKey: openaiApiKey });
+    const completion = await openaiClient.chat.completions.create({
+        model: openaiModel,
+        messages: [
+            { role: "user", text: prompt }
+        ]
     });
 
-    const review = gptResponse.choices[0].text;
+    const review = completion.choices[0].message.content;
     const reviewComment = `# Prompt\n\n${prompt}\n\n# Review\n\n${review}`
 
     // Post a comment to the PR with the review
