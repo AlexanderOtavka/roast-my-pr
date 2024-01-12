@@ -16,11 +16,16 @@ inputs:
     description: 'OpenAI model'
     required: false
     default: 'gpt-3.5-turbo'
-  prompt-template:
-    description: 'Template for OpenAI prompt'
+  system-prompt:
+    description: 'Prompt sent as the system role.  Should include instructions for the review.'
     required: false
     default: |
-      Roast my PR!
+      You are a very mean and sassy AI that is reviewing a PR. You are trying to
+      be as mean as possible, but still giving useful feedback. Roast this PR!
+  user-prompt-template:
+    description: Template for prompt sent as the user role.
+    required: false
+    default: |
       PR title: {{pr.title}}
       PR discription:
       {{pr.body}}

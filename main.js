@@ -8,7 +8,8 @@ async function run() {
     const githubToken = core.getInput('github-token');
     const openaiApiKey = core.getInput('openai-api-key');
     const openaiModel = core.getInput('openai-model');
-    const promptTemplate = core.getInput('prompt-template');
+    const systemPrompt = core.getInput('system-prompt');
+    const userPromptTemplate = core.getInput('user-prompt-template');
     const maxDiffSize = 2000;
 
     const octokit = github.getOctokit(githubToken);
@@ -43,22 +44,25 @@ async function run() {
         console.log(`Diff size is ${diff.length} bytes, which is larger than the max size of ${maxDiffSize} bytes. Skipping review.`);
     }
 
-    const prompt = promptTemplate
+    const userPrompt = userPromptTemplate
         .replace('{{pr.title}}', pr.title)
         .replace('{{pr.body}}', pr.body)
         .replace('{{pr.diff}}', shortDiff);
-    
-    console.log('Prompting GPT:\n', prompt);
+
+    console.log("Prompting OpenAI with the following prompt:")
+    console.log("System:\n", systemPrompt);
+    console.log("User:\n", userPrompt);
     const openaiClient = new OpenAI({ apiKey: openaiApiKey });
     const completion = await openaiClient.chat.completions.create({
         model: openaiModel,
         messages: [
-            { role: "user", content: prompt }
+            { role: "system", content: systemPrompt},
+            { role: "user", content: userPrompt }
         ]
     });
 
     const review = completion.choices[0].message.content;
-    const reviewComment = `# Prompt\n\n${prompt}\n\n# Review\n\n${review}`
+    const reviewComment = `# AI Code Review\n\n${review}`
 
     // Post a comment to the PR with the review
     await octokit.rest.issues.createComment({
