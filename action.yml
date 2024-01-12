@@ -12,6 +12,19 @@ inputs:
   openai-api-key:
     description: 'OpenAI API key'
     required: true
+  prompt-template:
+    description: 'Template for OpenAI prompt'
+    required: false
+    default: |
+      Roast my PR!
+      PR title: {{pr.title}}
+      PR discription:
+      {{pr.body}}
+
+      Code Diff:
+      ```
+      {{pr.diff}}
+      ```
 
 runs:
   using: 'node20'

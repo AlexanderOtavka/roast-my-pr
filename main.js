@@ -1,66 +1,63 @@
-const axios = require('axios');
+const core = require('@actions/core');
+const github = require('@actions/github');
 const openai = require('openai');
 
 async function run() {
-    try {
-        const githubToken = process.env.GITHUB_TOKEN;
-        const openaiApiKey = process.env.OPENAI_API_KEY;
-        const pullRequest = JSON.parse(process.env.GITHUB_EVENT_PATH);
+    console.log('Starting the review process...');
 
-        if (!pullRequest.pull_request) {
-            console.log('The event payload did not contain a pull_request object');
-            return;
-        }
+    const githubToken = core.getInput('github-token');
+    const openaiApiKey = core.getInput('openai-api-key');
+    const promptTemplate = core.getInput('prompt-template');
+    const maxDiffSize = 2000;
 
-        const prNumber = pullRequest.pull_request.number;
-        const repo = process.env.GITHUB_REPOSITORY;
-        const owner = repo.split('/')[0];
-        const repoName = repo.split('/')[1];
+    const octokit = github.getOctokit(githubToken);
+    const context = github.context;
 
-        const filesChangedResponse = await axios.get(`https://api.github.com/repos/${owner}/${repoName}/pulls/${prNumber}/files`, {
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        });
-
-        const filesChanged = filesChangedResponse.data.map(file => file.filename);
-
-        for (const file of filesChanged) {
-            const fileContentResponse = await axios.get(`https://api.github.com/repos/${owner}/${repoName}/contents/${file}`, {
-                headers: {
-                    'Authorization': `token ${githubToken}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-
-            const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf8');
-            const prompt = `
-                Review this code:
-                ### File: ${file}\n\n${fileContent}
-            `
-            console.log("Sending prompt", prompt);
-
-            const openaiResponse = await openai.Completion.create({
-                engine: 'text-davinci-002',
-                prompt,
-                max_tokens: 60
-            });
-
-            const comment = openaiResponse.choices[0].text.trim();
-
-            await axios.post(`https://api.github.com/repos/${owner}/${repoName}/issues/${prNumber}/comments`, {
-                body: comment
-            }, {
-                headers: {
-                    'Authorization': `token ${githubToken}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-        }
-    } catch (error) {
-        console.error(`Error: ${error}`);
+    if (!context.payload.pull_request) {
+        core.setFailed('No pull request found.');
+        return;
     }
+    const prNumber = context.payload.pull_request.number;
+
+    // Fetch the main PR metadata including title, body, etc.
+    const { data: pr } = await octokit.rest.pulls.get({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: prNumber
+    });
+
+    // Fetch the git diff in text form
+    const { data: diff } = await octokit.rest.pulls.get({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: prNumber,
+        mediaType: {
+            format: 'diff'
+        }
+    });
+
+    const shortDiff = diff.slice(0, maxDiffSize);
+
+    if (diff.length > maxDiffSize) {
+        console.log(`Diff size is ${diff.length} bytes, which is larger than the max size of ${maxDiffSize} bytes. Skipping review.`);
+    }
+
+    const prompt = promptTemplate
+        .replace('{{pr.title}}', pr.title)
+        .replace('{{pr.body}}', pr.body)
+        .replace('{{pr.diff}}', shortDiff);
+    
+    console.log('Prompt:', prompt);
+
+    const review = `# Prompt\n\n${prompt}`
+
+    // Post a comment to the PR with the review
+    await octokit.rest.issues.createComment({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: prNumber,
+        body: review
+    });
 }
 
 run();
