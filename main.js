@@ -53,7 +53,7 @@ async function run() {
     const completion = await openaiClient.chat.completions.create({
         model: openaiModel,
         messages: [
-            { role: "user", text: prompt }
+            { role: "user", content: prompt }
         ]
     });
 
