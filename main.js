@@ -24,6 +24,7 @@ async function run() {
     });
     const prComment = pr.body;
     console.log("PR comment", prComment);
+    console.log("PR", pr);
 
     // Fetch the git diff in text form
     const { data: diff } = await octokit.rest.pulls.get({
