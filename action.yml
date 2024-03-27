@@ -2,26 +2,28 @@ name: Roast My PR
 description: Automatic AI code reviews
 author: Zander Otavka
 branding:
-  icon: 'eye'
-  color: 'orange'
+  icon: eye
+  color: orange
 
 inputs:
   github-token:
-    description: 'GitHub token'
+    description: GitHub token
     required: true
   openai-api-key:
-    description: 'OpenAI API key'
+    description: OpenAI API key
     required: true
   openai-model:
-    description: 'OpenAI model'
+    description: OpenAI model
     required: false
-    default: 'gpt-4'
+    default: gpt-4-1106-preview	
   system-prompt:
-    description: 'Prompt sent as the system role.  Should include instructions for the review.'
+    description: Prompt sent as the system role.  Should include instructions for the review.
     required: false
     default: |
-      You are a very mean and sassy AI that is reviewing a PR. You are trying to
-      be as mean as possible, but still giving useful feedback. Roast this PR!
+      You are RoastMyPR, a sassy and sometimes mean AI that is reviewing a pull
+      request on GitHub. You are trying to give a funny roast of the PR
+      description and changes, but still giving useful feedback.  Keep the
+      review short. Just focus on the 1-3 most important things. Roast this PR!
   user-prompt-template:
     description: Template for prompt sent as the user role.
     required: false
@@ -34,7 +36,15 @@ inputs:
       ```
       {{pr.diff}}
       ```
+  max-diff-length:
+    description: Maximum length of the diff to send to OpenAI.
+    required: false
+    default: '12000'
+  review-request:
+    description: Set to `required` to wait for a review request.
+    required: false
+    default: optional
 
 runs:
-  using: 'node20'
-  main: 'main.js'
+  using: node20
+  main: main.js

@@ -10,7 +10,9 @@ async function run() {
     const openaiModel = core.getInput('openai-model');
     const systemPrompt = core.getInput('system-prompt');
     const userPromptTemplate = core.getInput('user-prompt-template');
-    const maxDiffSize = 2000;
+    const maxDiffLength = parseInt(core.getInput('max-diff-length'));
+    const maxIndividualFileDiff = 8000;
+    const reviewRequest = core.getInput('review-request');
 
     const octokit = github.getOctokit(githubToken);
     const context = github.context;
@@ -28,26 +30,46 @@ async function run() {
         pull_number: prNumber
     });
 
+    if (reviewRequest === "required") {
+        // Check if the PR is requesting a review from the current user
+        const { data: currentUser } = await octokit.rest.users.getAuthenticated();
+        if (!pr.requested_reviewers?.some(reviewer => reviewer.login === currentUser.login)) {
+            console.log(`No review requested for user: ${currentUser.login}. Skipping.`);
+            return;
+        }
+    }
+
     // Fetch the git diff in text form
-    const { data: diff } = await octokit.rest.pulls.get({
+    const { data: files } = await octokit.rest.pulls.listFiles({
         owner: context.repo.owner,
         repo: context.repo.repo,
-        pull_number: prNumber,
-        mediaType: {
-            format: 'diff'
-        }
+        pull_number: prNumber
     });
 
-    const shortDiff = diff.slice(0, maxDiffSize);
+    let diff = "";
+    for (const file of files) {
+        const previousFilename = file.previous_filename || file.filename;
+        diff += `diff --git a/${previousFilename} b/${file.filename}\n`;
+        diff += `index ${file.sha} ${file.status}\n`;
+        if (file.patch && file.patch.length <= maxIndividualFileDiff) {
+            diff += `--- a/${previousFilename}\n`;
+            diff += `+++ b/${file.filename}\n`;
+            diff += file.patch + "\n\n";
+        } else {
+            diff += "[File diff too long. Skipping]\n\n";
+        }
 
-    if (diff.length > maxDiffSize) {
-        console.log(`Diff size is ${diff.length} bytes, which is larger than the max size of ${maxDiffSize} bytes. Skipping review.`);
+        if (diff.length > maxDiffLength) {
+            diff = diff.slice(0, maxDiffLength);
+            diff += "...\n\n[Diff too long. Truncated]"
+            break;
+        }
     }
 
     const userPrompt = userPromptTemplate
         .replace('{{pr.title}}', pr.title)
         .replace('{{pr.body}}', pr.body)
-        .replace('{{pr.diff}}', shortDiff);
+        .replace('{{pr.diff}}', diff);
 
     console.log("Prompting OpenAI with the following prompt:")
     console.log("System:\n", systemPrompt);
@@ -62,14 +84,15 @@ async function run() {
     });
 
     const review = completion.choices[0].message.content;
-    const reviewComment = `# AI Code Review\n\n${review}`
+    const reviewComment = `# Roast My PR: AI Code Review\n\n${review}`
 
-    // Post a comment to the PR with the review
-    await octokit.rest.issues.createComment({
+    // Post a PR review comment
+    await octokit.rest.pulls.createReview({
         owner: context.repo.owner,
         repo: context.repo.repo,
-        issue_number: prNumber,
-        body: reviewComment
+        pull_number: prNumber,
+        body: reviewComment,
+        event: "COMMENT"
     });
 }
 
