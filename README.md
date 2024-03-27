@@ -10,7 +10,10 @@ This project is a GitHub Action that automatically reviews code by leaving comme
 
 ```yml
 name: Roast My PR
-on: [pull_request]
+on:
+  pull_request:
+    # Run this action whenever a pull request is created or updated
+    types: [opened, synchronize]
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -23,7 +26,33 @@ jobs:
         openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-This will trigger the action whenever a new pull request is created or updated.
+3. (Optional) You can further customize the review experience so users can directly request reviews from a bot account like they would with a human reviewer.  You'll need a [user account](https://docs.github.com/en/get-started/learning-about-github/types-of-github-accounts#personal-accounts) for your bot, then save a personal access token for the bot account under `BOT_ACCOUNT_TOKEN`.  Then update your workflow as follows:
+
+```yml
+name: Roast My PR
+on:
+  pull_request:
+    # Only run this action when a review is requested
+    types: [review_requested]
+concurrency:
+  # Don't run this action on the same PR at the same time in case of multiple
+  # review requests in quick succession that could cause duplicate reviews.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Roast My PR
+      uses: ./
+      with:
+        github-token: ${{ secrets.BOT_ACCOUNT_TOKEN }}
+        openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+        # Skip posting a review unless the account `github-token` belongs to has
+        # a pending review request
+        review-request: required
+```
 
 ## License
 
